@@ -1,0 +1,6 @@
+customer_age,job_status,yearly_income,fico_score,late_payments,loan_default
+25,employed,50000,650,2,0
+30,unemployed,30000,550,5,1
+45,employed,80000,720,0,0
+35,self-employed,60000,680,1,0
+28,employed,45000,590,3,1
