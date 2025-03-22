@@ -2,23 +2,22 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser
 from .models import UploadedData, ProcessedData
 from .serializers import UploadedDataSerializer, ProcessedDataSerializer
+from .processing import process_uploaded_file
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from django.core.files.base import ContentFile
-from rest_framework.parsers import MultiPartParser
-from .processing import process_uploaded_file
 import pandas as pd
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 class FileUploadView(APIView):
-<<<<<<< Updated upstream
-    permission_classes = [IsAuthenticated]  # Only logged-in users can upload
-    parser_classes = [MultiPartParser]
-=======
     permission_classes = [IsAuthenticated]
->>>>>>> Stashed changes
+    parser_classes = [MultiPartParser]
 
     def post(self, request):
         file_obj = request.FILES.get('file')
@@ -32,15 +31,13 @@ class FileUploadView(APIView):
 
         # Save the uploaded file
         uploaded_data = UploadedData(
-            user=request.user,  # Tie to the authenticated user
+            user=request.user,
             file=file_obj,
-<<<<<<< Updated upstream
-            file_type=file_name.split('.')[-1]  # e.g., 'csv', 'xlsx', 'json'
-=======
-            file_type=file_name.split('.')[-1]
->>>>>>> Stashed changes
+            file_type=file_name.split('.')[-1].lower(),  # e.g., 'csv', 'xlsx', 'json'
+            file_size=file_obj.size  # Optional: track file size
         )
         uploaded_data.save()
+        logger.info(f"File uploaded by {request.user.id}: {file_name}, ID: {uploaded_data.id}")
 
         # Run processing asynchronously
         task_result = process_uploaded_file.delay(uploaded_data.id)
@@ -66,7 +63,6 @@ class ProcessedDataViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return ProcessedData.objects.filter(uploaded_data__user=self.request.user)
-    
 
 class ApiDataSyncView(APIView):
     permission_classes = [IsAuthenticated]
@@ -85,15 +81,16 @@ class ApiDataSyncView(APIView):
         )
         uploaded_data.file.save('api_sync.json', ContentFile(json.dumps(data).encode()))
         uploaded_data.save()
+        logger.info(f"API data synced by {request.user.id}, ID: {uploaded_data.id}")
 
         # Trigger processing
-        process_uploaded_file.delay(uploaded_data.id)
-
+        task_result = process_uploaded_file.delay(uploaded_data.id)
         return Response({
             "message": "API data received and queued for processing.",
+            "task_id": task_result.id,
             "file_id": uploaded_data.id
         }, status=status.HTTP_201_CREATED)
-        
+
 class GoogleSheetsSyncView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -120,11 +117,17 @@ class GoogleSheetsSyncView(APIView):
             uploaded_data.file.save(f'gsheet_{sheet_url.split("/")[-2]}.json', 
                                   ContentFile(json.dumps(data).encode()))
             uploaded_data.save()
+            logger.info(f"Google Sheet synced by {request.user.id}, ID: {uploaded_data.id}")
 
-            process_uploaded_file.delay(uploaded_data.id)
-            return Response({"message": "Google Sheet data synced and processing.", "file_id": uploaded_data.id}, 
-                           status=status.HTTP_201_CREATED)
+            # Trigger processing
+            task_result = process_uploaded_file.delay(uploaded_data.id)
+            return Response({
+                "message": "Google Sheet data synced and processing.",
+                "task_id": task_result.id,
+                "file_id": uploaded_data.id
+            }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger.error(f"Google Sheet sync failed for {request.user.id}: {str(e)}")
             return Response({"error": f"Failed to sync Google Sheet: {str(e)}"}, 
                            status=status.HTTP_400_BAD_REQUEST)

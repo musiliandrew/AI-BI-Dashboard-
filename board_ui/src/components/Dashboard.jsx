@@ -1,34 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Sidebar from './Sidebar';
 import Header from './Header';
+
 const QuantAnalyticsDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [metrics, setMetrics] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [performanceData, setPerformanceData] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const chartData = [
-    { name: 'Jan', value: 65 },
-    { name: 'Feb', value: 80 },
-    { name: 'Mar', value: 75 },
-    { name: 'Apr', value: 90 },
-    { name: 'May', value: 85 },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No authentication token found');
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-<<<<<<< Updated upstream
-  const performanceData = [
-    { name: 'Q1', efficiency: 45, accuracy: 75 },
-    { name: 'Q2', efficiency: 60, accuracy: 82 },
-    { name: 'Q3', efficiency: 75, accuracy: 88 },
-    { name: 'Q4', efficiency: 80, accuracy: 91 },
-  ];
-=======
+        // Fetch dashboards
         const dashboardsRes = await fetch('http://127.0.0.1:8000/analytics/dashboards/', { headers });
         if (!dashboardsRes.ok) throw new Error('Failed to fetch dashboards');
         const dashboardsData = await dashboardsRes.json();
 
+        // Fetch processed data
         const processedRes = await fetch('http://127.0.0.1:8000/data-ingestion/processed-data/', { headers });
         if (!processedRes.ok) throw new Error('Failed to fetch processed data');
         const processedData = await processedRes.json();
 
+        // Fetch analysis results
         const analysisRes = await fetch('http://127.0.0.1:8000/analytics/analysis-results/', { headers });
         if (!analysisRes.ok) throw new Error('Failed to fetch analysis results');
         const analysisData = await analysisRes.json();
@@ -43,19 +44,19 @@ const QuantAnalyticsDashboard = () => {
           { title: 'Dashboards', value: dashboardsData.length, change: dashboardsData.length > 0 ? `+${Math.round((dashboardsData.length / (dashboardsData.length + 1)) * 100)}%` : '0%' },
         ]);
 
-        // Monthly Activity
+        // Monthly Activity (processed data volume by month)
         const monthlyActivity = processedData.reduce((acc, item) => {
           const month = new Date(item.processed_at).toLocaleString('default', { month: 'short' });
-          acc[month] = (acc[month] || 0) + (item.processed_json?.length || 0);
+          acc[month] = (acc[month] || 0) + (JSON.parse(item.processed_json)?.length || 0);
           return acc;
         }, {});
         setChartData(Object.entries(monthlyActivity).slice(-5).map(([name, value]) => ({ name, value })));
 
-        // Model Performance
+        // Model Performance (from analysis results)
         setPerformanceData(analysisData.slice(-4).map((item, idx) => ({
           name: item.name || `Run ${idx + 1}`,
-          efficiency: item.efficiency || (Math.random() * 100),
-          accuracy: item.accuracy || (Math.random() * 100),
+          efficiency: item.efficiency || (Math.random() * 100), // Fallback if null
+          accuracy: item.accuracy || (Math.random() * 100),     // Fallback if null
         })));
 
         // Recent Activity
@@ -90,23 +91,16 @@ const QuantAnalyticsDashboard = () => {
       </div>
     );
   }
->>>>>>> Stashed changes
 
   return (
     <div className="min-h-screen bg-white">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Main Content */}
       <div className="md:ml-64">
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6">
-          {[
-            { title: 'Total Models', value: '24', change: '+12%' },
-            { title: 'Active Processes', value: '1,432', change: '+8%' },
-            { title: 'Accuracy Rate', value: '94.6%', change: '+2.1%' },
-            { title: 'API Calls', value: '24.3k', change: '-3%' },
-          ].map((metric, index) => (
+          {metrics.map((metric, index) => (
             <div key={index} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
               <h3 className="text-gray-500 text-sm mb-2">{metric.title}</h3>
               <div className="flex items-center justify-between">
@@ -130,8 +124,8 @@ const QuantAnalyticsDashboard = () => {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="efficiency" stroke="#06b6d4" />
-                  <Line type="monotone" dataKey="accuracy" stroke="#4f46e5" />
+                  <Line type="monotone" dataKey="efficiency" stroke="#06b6d4" name="Efficiency" />
+                  <Line type="monotone" dataKey="accuracy" stroke="#4f46e5" name="Accuracy" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -146,7 +140,7 @@ const QuantAnalyticsDashboard = () => {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#06b6d4" />
+                  <Bar dataKey="value" fill="#06b6d4" name="Records Processed" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -158,14 +152,10 @@ const QuantAnalyticsDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
             <div className="space-y-4">
-              {[
-                { time: '10:42 AM', event: 'Updated prediction model v2.4.1' },
-                { time: '9:15 AM', event: 'Triggered new data pipeline' },
-                { time: 'Yesterday', event: 'Trained new NLP model (92% accuracy)' },
-              ].map((activity, index) => (
+              {activity.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                  <span className="text-gray-600">{activity.event}</span>
-                  <span className="text-sm text-gray-400">{activity.time}</span>
+                  <span className="text-gray-600">{item.event}</span>
+                  <span className="text-sm text-gray-400">{item.time}</span>
                 </div>
               ))}
             </div>

@@ -1,168 +1,149 @@
-import { useState } from "react";
+// board_ui/src/components/Signup.jsx
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom'; // Added Link to import
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 
 const Signup = () => {
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    termsAccepted: false,
-  });
-
-  const [error, setError] = useState("");
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!formData.username) return setError("Username is required");
-    if (!formData.email) return setError("Email is required");
-    if (!formData.email.includes("@"))
-      return setError("Please enter a valid email address");
-    if (!formData.password) return setError("Password is required");
-    if (formData.password !== formData.confirmPassword)
-      return setError("Passwords do not match");
-    if (!formData.termsAccepted)
-      return setError("You must accept the Terms and Conditions");
-
-    setError("");
     setLoading(true);
+    setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
 
     try {
-      const response = await fetch("https://your-backend-api.com/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-        }),
+      const response = await fetch('http://127.0.0.1:8000/users/signup/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
       });
 
-      const data = await response.json();
-      setLoading(false);
-
       if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Signup failed');
       }
 
-      alert("Signup successful!");
+      const data = await response.json();
+      localStorage.setItem('token', data.access);
+      localStorage.setItem('refresh', data.refresh);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col justify-center font-[sans-serif] sm:h-screen p-4">
-      <div className="max-w-md w-full mx-auto border border-gray-300 rounded-2xl p-8">
-        <div className="text-center mb-12">
-          <a href="#">
-            <img
-              src="https://readymadeui.com/readymadeui.svg"
-              alt="logo"
-              className="w-40 inline-block"
-            />
-          </a>
-        </div>
-
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-cyan-100">
+        <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+          Sign Up to <span className="text-cyan-500">QuantAnalytics</span>
+        </h2>
         <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <div>
-              <label className="text-gray-800 text-sm mb-2 block">Username</label>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2 font-medium" htmlFor="username">Username</label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+              <FiUser className="text-cyan-500 mr-3" />
               <input
-                name="username"
                 type="text"
-                value={formData.username}
-                onChange={handleChange}
-                className="text-gray-800 bg-white border border-gray-300 w-full text-sm px-4 py-3 rounded-md outline-blue-500"
-                placeholder="Enter username"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full outline-none bg-transparent text-gray-900 placeholder-gray-400"
+                placeholder="Enter your username"
+                required
               />
             </div>
-
-            <div>
-              <label className="text-gray-800 text-sm mb-2 block">Email</label>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2 font-medium" htmlFor="email">Email</label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+              <FiMail className="text-cyan-500 mr-3" />
               <input
-                name="email"
                 type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="text-gray-800 bg-white border border-gray-300 w-full text-sm px-4 py-3 rounded-md outline-blue-500"
-                placeholder="Enter email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full outline-none bg-transparent text-gray-900 placeholder-gray-400"
+                placeholder="Enter your email"
+                required
               />
-            </div>
-
-            <div>
-              <label className="text-gray-800 text-sm mb-2 block">Password</label>
-              <input
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="text-gray-800 bg-white border border-gray-300 w-full text-sm px-4 py-3 rounded-md outline-blue-500"
-                placeholder="Enter password"
-              />
-            </div>
-
-            <div>
-              <label className="text-gray-800 text-sm mb-2 block">Confirm Password</label>
-              <input
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="text-gray-800 bg-white border border-gray-300 w-full text-sm px-4 py-3 rounded-md outline-blue-500"
-                placeholder="Confirm password"
-              />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="termsAccepted"
-                type="checkbox"
-                checked={formData.termsAccepted}
-                onChange={handleChange}
-                className="h-4 w-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="text-gray-800 ml-3 block text-sm">
-                I accept the{" "}
-                <a href="#" className="text-blue-600 font-semibold hover:underline ml-1">
-                  Terms and Conditions
-                </a>
-              </label>
             </div>
           </div>
-
-          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-
-          <div className="!mt-8">
-            <button
-              type="submit"
-              className="w-full py-3 px-4 text-sm tracking-wider font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
-              disabled={loading}
-            >
-              {loading ? "Creating account..." : "Create an account"}
-            </button>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2 font-medium" htmlFor="password">Password</label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 relative">
+              <FiLock className="text-cyan-500 mr-3" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full outline-none bg-transparent text-gray-900 placeholder-gray-400 pr-10"
+                placeholder="Enter your password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 text-cyan-500 hover:text-cyan-600"
+              >
+                {showPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
           </div>
-
-          <p className="text-gray-800 text-sm mt-6 text-center">
-            Already have an account?{" "}
-            <a href="/login" className="text-blue-600 font-semibold hover:underline ml-1">
-              Login here
-            </a>
-          </p>
+          <div className="mb-6">
+            <label className="block text-gray-700 mb-2 font-medium" htmlFor="confirmPassword">Confirm Password</label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 relative">
+              <FiLock className="text-cyan-500 mr-3" />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full outline-none bg-transparent text-gray-900 placeholder-gray-400 pr-10"
+                placeholder="Confirm your password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 text-cyan-500 hover:text-cyan-600"
+              >
+                {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
+          </div>
+          {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-cyan-500 text-white py-3 rounded-xl hover:bg-cyan-600 font-semibold transition-all duration-300 shadow-md hover:shadow-cyan-500/30"
+            disabled={loading}
+          >
+            {loading ? 'Signing up...' : 'Sign Up'}
+          </button>
         </form>
+        <p className="mt-6 text-gray-600 text-center">
+          Already have an account?{' '}
+          <Link to="/login" className="text-cyan-500 hover:text-cyan-600 font-medium hover:underline">
+            Log In
+          </Link>
+        </p>
       </div>
     </div>
   );

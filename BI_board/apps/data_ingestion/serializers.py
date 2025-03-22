@@ -2,25 +2,21 @@ from rest_framework import serializers
 from .models import UploadedData, ProcessedData
 
 class UploadedDataSerializer(serializers.ModelSerializer):
-<<<<<<< Updated upstream
-    class Meta:
-        model = UploadedData
-        fields = '__all__'
-=======
     file_size = serializers.SerializerMethodField()
-    file = serializers.FileField()  # Ensure file path is included
+    file = serializers.FileField()  # Returns the file URL
 
     class Meta:
         model = UploadedData
-        fields = '__all__'
+        fields = ['id', 'user', 'file', 'file_type', 'file_size', 'uploaded_at', 'processed']
+        read_only_fields = ['id', 'user', 'file_size', 'uploaded_at', 'processed']
 
     def get_file_size(self, obj):
         return obj.file.size if obj.file else None
->>>>>>> Stashed changes
 
 class ProcessedDataSerializer(serializers.ModelSerializer):
-    uploaded_data = UploadedDataSerializer(read_only=True)  # Nest UploadedData details
+    uploaded_data = UploadedDataSerializer(read_only=True)  # Nested UploadedData details
 
     class Meta:
         model = ProcessedData
-        fields = '__all__'
+        fields = ['id', 'uploaded_data', 'processed_json', 'processed_at']
+        read_only_fields = ['id', 'uploaded_data', 'processed_json', 'processed_at']
