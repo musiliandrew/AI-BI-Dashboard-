@@ -5,10 +5,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    
+
     # app-specific URLs
-    path("analytics/", include("apps.analytics.urls")),
-    path("data-ingestion/", include("apps.data_ingestion.urls")),
-    path("users/", include("apps.users.urls")),
+    path("api/analytics/", include("apps.analytics.urls")),
+    path("api/data-ingestion/", include("apps.data_ingestion.urls")),
+    path("api/users/", include("apps.users.urls")),
+    path("api/", include("apps.organizations.urls")),  # SaaS organization endpoints
+    path("api/ai-chat/", include("apps.ai_chat.urls")),  # AI Data Scientist Chat
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

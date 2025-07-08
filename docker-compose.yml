@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: quantanalytics_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for Celery and Caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Django Backend
+  backend:
+    build:
+      context: ./BI_board
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-super-secret-key-change-in-production
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/quantanalytics_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/1
+      - STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key
+      - STRIPE_SECRET_KEY=sk_test_your_stripe_key
+      - STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+      - ALLOWED_HOSTS=localhost,127.0.0.1,your-domain.com
+    volumes:
+      - ./BI_board:/app
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py create_subscription_plans &&
+             python manage.py collectstatic --noinput &&
+             gunicorn BI_board.wsgi:application --bind 0.0.0.0:8000"
+
+  # Celery Worker
+  celery:
+    build:
+      context: ./BI_board
+      dockerfile: Dockerfile
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-super-secret-key-change-in-production
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/quantanalytics_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - ./BI_board:/app
+      - media_files:/app/media
+    depends_on:
+      - db
+      - redis
+      - backend
+    command: celery -A BI_board worker -l info
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./board_ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
+      - REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key
+    volumes:
+      - ./board_ui:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - media_files:/var/www/media
+      - static_files:/var/www/static
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+  static_files:

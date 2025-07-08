@@ -3,9 +3,15 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
 from .models import AnalysisResults, ProcessedData
+from .intelligent_analyzer import IntelligentDatasetAnalyzer
 import json
 from fuzzywuzzy import process
+import logging
+
+logger = logging.getLogger(__name__)
 
 @shared_task
 def run_analytics(processed_data_id, column_mappings=None):

@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'apps.data_ingestion',
     'django_celery_results',
     'apps.users',
+    'apps.organizations',  # New SaaS organization app
+    'apps.ai_chat',  # AI Data Scientist Chat
 ]
 
 MIDDLEWARE = [
@@ -50,6 +52,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # SaaS middleware
+    'apps.organizations.middleware.OrganizationContextMiddleware',
+    'apps.organizations.middleware.UsageTrackingMiddleware',
+    'apps.organizations.middleware.FeatureAccessMiddleware',
 ]
 
 ROOT_URLCONF = "BI_board.urls"
@@ -179,3 +185,38 @@ CELERY_ACCEPT_CONTENT = ['json']  # Tasks can only receive JSON data
 CELERY_TASK_SERIALIZER = 'json'   # Tasks serialized as JSON
 CELERY_RESULT_SERIALIZER = 'json' # Results serialized as JSON
 CELERY_TIMEZONE = 'UTC'           # Match Django's timezone
+
+# Redis Configuration (for caching and rate limiting)
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Stripe Configuration
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
+
+# SaaS Configuration
+SAAS_SETTINGS = {
+    'DEFAULT_PLAN': 'starter',
+    'TRIAL_PERIOD_DAYS': 14,
+    'AUTO_CREATE_ORGANIZATION': True,
+}
+
+# OpenAI Configuration for AI Chat
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+# AI Chat Settings
+AI_CHAT_SETTINGS = {
+    'DEFAULT_MODEL': 'gpt-3.5-turbo',  # or 'gpt-4' for better quality
+    'MAX_TOKENS': 1000,
+    'TEMPERATURE': 0.7,
+    'ENABLE_MEMORY': True,
+    'CONTEXT_WINDOW': 10,  # Number of previous messages to include
+}
