@@ -32,15 +32,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'corsheaders',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'apps.analytics',
-    'apps.data_ingestion',
-    'django_celery_results',
-    'apps.users',
-    'apps.organizations',  # New SaaS organization app
-    'apps.ai_chat',  # AI Data Scientist Chat
+
+    # Core BI Platform Apps
+    'apps.data_pipeline',           # Main data processing engine
+    'apps.ml_engine',              # AI/ML brain
+    'apps.unified_data_engine',    # Efficient processing core
+    'apps.social_intelligence',    # Social media analytics
+    'apps.payments',               # Payment processing
+    'apps.website_intelligence',   # Website analytics
 ]
 
 MIDDLEWARE = [
@@ -48,14 +47,9 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # SaaS middleware
-    'apps.organizations.middleware.OrganizationContextMiddleware',
-    'apps.organizations.middleware.UsageTrackingMiddleware',
-    'apps.organizations.middleware.FeatureAccessMiddleware',
 ]
 
 ROOT_URLCONF = "BI_board.urls"
@@ -135,7 +129,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-AUTH_USER_MODEL = 'users.Users' 
+# Using Django's default User model
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
@@ -178,22 +172,11 @@ REST_FRAMEWORK = {
 
 # BI_board/settings.py
 
-# Celery Configuration
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # Default Redis URL
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')  # Store task results
-CELERY_ACCEPT_CONTENT = ['json']  # Tasks can only receive JSON data
-CELERY_TASK_SERIALIZER = 'json'   # Tasks serialized as JSON
-CELERY_RESULT_SERIALIZER = 'json' # Results serialized as JSON
-CELERY_TIMEZONE = 'UTC'           # Match Django's timezone
-
-# Redis Configuration (for caching and rate limiting)
+# Simplified caching (no Redis dependency for now)
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
     }
 }
 
@@ -202,21 +185,9 @@ STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
 
-# SaaS Configuration
-SAAS_SETTINGS = {
-    'DEFAULT_PLAN': 'starter',
-    'TRIAL_PERIOD_DAYS': 14,
-    'AUTO_CREATE_ORGANIZATION': True,
-}
-
-# OpenAI Configuration for AI Chat
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-
-# AI Chat Settings
-AI_CHAT_SETTINGS = {
-    'DEFAULT_MODEL': 'gpt-3.5-turbo',  # or 'gpt-4' for better quality
-    'MAX_TOKENS': 1000,
-    'TEMPERATURE': 0.7,
-    'ENABLE_MEMORY': True,
-    'CONTEXT_WINDOW': 10,  # Number of previous messages to include
+# BI Platform Configuration
+BI_PLATFORM_SETTINGS = {
+    'DEFAULT_PROCESSING_PRIORITY': 'medium',
+    'MAX_CONCURRENT_PIPELINES': 10,
+    'ENABLE_ML_AUTO_TRAINING': True,
 }

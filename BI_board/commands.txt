@@ -1,6 +1,0 @@
-redis-server 
-celery -A BI_board worker -l info
-
-
-
-file url: https://docs.google.com/spreadsheets/d/1_h8C5PuycoCf7h4vgTC_gFghrsvbjTJFmXwTuh3RCjM/edit?gid=0#gid=0
